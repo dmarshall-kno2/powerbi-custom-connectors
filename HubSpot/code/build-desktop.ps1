@@ -4,14 +4,14 @@ param(
     [string]$TargetName = "Kno2HubSpotConnector"  # base name; .mez is appended
 )
 
-$desktop = [Environment]::GetFolderPath("Desktop")
+$onedriveDesktop = "C:\Users\DanMarshall\OneDrive - Kno2\Desktop"
 
 # If the user provided an absolute path for TargetName, treat it as the full target base.
-# Otherwise, place the target on the Desktop (backwards-compatible default).
+# Otherwise, place the target on the OneDrive Desktop (user requested default).
 if ([System.IO.Path]::IsPathRooted($TargetName)) {
     $targetBase = $TargetName
 } else {
-    $targetBase = Join-Path $desktop $TargetName
+    $targetBase = Join-Path $onedriveDesktop $TargetName
 }
 
 if (-not (Test-Path $MakePath)) {
