@@ -1,0 +1,6 @@
+{
+  "powerquery.sdk.defaultExtension": "${workspaceFolder}\\${workspaceFolderBasename}.mez",
+  "powerquery.sdk.makepqxpath": "C:\\Users\\DanMarshall\\.vscode\\extensions\\ms-pq.pq-devtools-0.6.3-win32-x64\\bin\\MakePQX.exe",
+  "powerquery.general.mode": "SDK",
+  "powerquery.sdk.defaultQueryFile": "${workspaceFolder}\\HubSpotConnector.query.pq"
+}

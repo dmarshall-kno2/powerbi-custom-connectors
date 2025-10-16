@@ -1,5 +1,7 @@
-﻿// Use this file to write queries to test your data connector
+﻿section Test;
+
+shared Query =
 let
-    result = HubSpot.Contents()
+    Source = HubSpot.Contents()
 in
-    result
+    Source;
