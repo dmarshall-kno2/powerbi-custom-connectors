@@ -63,6 +63,14 @@ if ($outFile) {
 
     Copy-Item $outFile $pbifolder -Force
     Write-Host "Copied to Power BI connectors folder: $pbifolder"
+
+        # Also copy to the project's bin folder for VS Code testing
+        $vsCodeBinFolder = Join-Path $Src "bin\AnyCPU\Debug"
+        if (!(Test-Path $vsCodeBinFolder)) {
+            New-Item -ItemType Directory -Path $vsCodeBinFolder | Out-Null
+        }
+        Copy-Item $outFile $vsCodeBinFolder -Force
+        Write-Host "Copied to VS Code bin folder for local testing: $vsCodeBinFolder"
     exit 0
 } else {
     Write-Error "`n❌ Build failed or file not found. Look for output on Desktop: $desktop"
