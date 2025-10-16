@@ -1,262 +1,254 @@
-﻿[version = "3.0.0"]
+﻿// This file contains your Data Connector logic
+[version = "3.0.0"]
 section HubSpot;
-
-// ======================================================================
-// Kno2 HubSpot Connector  (Key auth, cursor pagination, polyfills)
-// ======================================================================
 
 baseUrl = "https://api.hubapi.com";
 
-// ------------------------------
-// Exported entry point
-// ------------------------------
-[DataSource.Kind="Kno2HubSpot", Publish="Kno2HubSpot.Publish"]
-shared HubSpot.Contents = () as table =>
-let
-    client = HubSpot.CreateClient(),
-    nav    = HubSpot.Navigation(client)
-in
-    nav;
+accountsSuffixUrl = "/crm/v3/objects/companies";
+dealsSuffixUrl = "/crm/v3/objects/deals";
+contactsSuffixUrl = "/crm/v3/objects/contacts";
+ticketsSuffixUrl = "/crm/v3/objects/tickets";
+ownersSuffixUrl = "/crm/v3/owners/";
+accountsPropertiesSuffixUrl = "/crm/v3/properties/companies";
 
-// ------------------------------
-// Connector metadata (reuse Key auth)
-// ------------------------------
-Kno2HubSpot = [
-    // Returning the function name to execute for the handshake
-    TestConnection = (dataSourcePath) as list => { "HubSpot.TestConnection" },
+accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annualrevenue,createdate,hs_lead_status,num_contacted_notes,recent_deal_amount,total_revenue";
+dealsProperties = "hs_forecast_amount,hs_manual_forecast_category,hs_forecast_probability,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
+contactsProperties = "lead_source,gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,hs_analytics_source,lifecyclestage,associatedcompanyid,createdate";
+ticketProperties = "hs_ticket_priority,hs_pipeline,subject,time_to_close,time_to_first_agent_reply,hs_pipeline_stage,createdate,source_type,hubspot_owner_id,hs_ticket_category,closed_date,hs_lastcontacted";
+ownerProperties = "id,email,type,firstName,lastName,userId,userIdIncludingInactive,createdAt,updatedAt,archived";
+pageSize = "100";
 
-    // Same pattern as original: Feed Key / Private App Token
-    Authentication = [ Key = [ KeyLabel = "Private App Access Token" ] ],
+[DataSource.Kind="HubSpot", Publish="HubSpot.Publish"]
+shared HubSpot.Contents = Value.ReplaceType(HubSpot.NavImpl, HubSpot.Params);
 
-    Label = "Kno2 HubSpot Connector"
+HubSpot.Params = type function() as table meta [
+    Documentation.Name = Extension.LoadString("HubSpot.Contents.Name"),
+    Documentation.LongDescription = Extension.LoadString("HubSpot.Contents.LongDescription")
 ];
 
-Kno2HubSpot.Publish = [
+HubSpot.NavImpl = () as table =>
+let
+    objects = #table(
+        {"Name", "Key", "Data", "ItemKind", "ItemName", "IsLeaf"},
+        {
+            {"Accounts", "Accounts", HubSpot.GetAccounts(), "Table", "Table", true},
+            {"Contacts", "Contacts", HubSpot.GetContacts(), "Table", "Table", true},
+            {"Deals", "Deals", HubSpot.GetDeals(), "Table", "Table", true},
+            {"Tickets", "Tickets", HubSpot.GetTickets(), "Table", "Table", true},
+            {"Owners", "Owners", HubSpot.GetOwners(), "Table", "Table", true}
+        }
+    ),
+    NavTable = HubSpot.ToNavigationTable(objects, {"Key"}, "Name", "Data", "ItemKind", "ItemName", "IsLeaf")
+in
+    NavTable;
+
+// Generic function to handle pagination and return a single list of all records.
+HubSpot.GetAllPages = (initialUrl as text) as list =>
+let
+    accessToken = Extension.CurrentCredential()[Key],
+    apiHeaders = [#"Content-Type" = "application/json", Authorization = "Bearer " & accessToken],
+
+    // Generates a list of pages (each page is a record with results and a next link)
+    pages = List.Generate(
+        () => // Initial function to get the first page
+            let
+                response = Json.Document(Web.Contents(initialUrl, [ManualCredentials = true, Headers = apiHeaders])),
+                results = Record.FieldOrDefault(response, "results", {}),
+                nextLink = try response[paging][next][link] otherwise null
+            in
+                [Results = results, NextLink = nextLink],
+        each [NextLink] <> null, // Continue condition: keep going as long as there's a next link
+        each // Function to get the next page
+            let
+                response = Json.Document(Web.Contents([NextLink], [ManualCredentials = true, Headers = apiHeaders])),
+                results = Record.FieldOrDefault(response, "results", {}),
+                nextLink = try response[paging][next][link] otherwise null
+            in
+                [Results = results, NextLink = nextLink],
+        each [Results] // Selector: extract the records from each page
+    ),
+    // Combine the lists of records from all pages into a single list
+    allRecords = List.Combine(pages)
+in
+    allRecords;
+
+
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetAccounts = Value.ReplaceType(HubSpot.GetAccountsImpl, HubSpot.GetAccountsImplType);
+
+HubSpot.GetAccountsImplType = type function() as table meta [
+    Documentation.Name = Extension.LoadString("HubSpot.GetAccounts.Name"),
+    Documentation.LongDescription = Extension.LoadString("HubSpot.GetAccounts.LongDescription")
+];
+
+Hubspot.GetAccountCustomProperties = () =>
+let
+    queryRecord = [archived = "false"],
+    queryString = Uri.BuildQueryString(queryRecord),
+    url = baseUrl & accountsPropertiesSuffixUrl & "?" & queryString,
+    accessToken = Extension.CurrentCredential()[Key],
+    apiHeaders = [#"Content-Type" = "application/json", Authorization = "Bearer " & accessToken],
+    Source = Json.Document(Web.Contents(url, [ ManualCredentials = true, Headers = apiHeaders])),
+    #"Converted to Table" = Table.FromRecords({Source}),
+    #"Expanded results" = Table.ExpandListColumn(#"Converted to Table", "results"),
+    #"Expanded results1" = Table.ExpandRecordColumn(#"Expanded results", "results", {"updatedAt", "createdAt", "name", "label", "type", "fieldType", "description", "groupName", "options", "createdUserId", "updatedUserId", "referencedObjectType", "displayOrder", "calculated", "externalOptions", "archived", "hasUniqueValue", "hidden", "hubspotDefined", "showCurrencySymbol", "modificationMetadata", "formField"}, {"results.updatedAt", "results.createdAt", "results.name", "results.label", "results.type", "results.fieldType", "results.description", "results.groupName", "results.options", "results.createdUserId", "results.updatedUserId", "results.referencedObjectType", "results.displayOrder", "results.calculated", "results.externalOptions", "results.archived", "results.hasUniqueValue", "results.hidden", "results.hubspotDefined", "results.showCurrencySymbol", "results.modificationMetadata", "results.formField"}),
+    #"Expanded results.modificationMetadata" = Table.ExpandRecordColumn(#"Expanded results1", "results.modificationMetadata", {"archivable", "readOnlyDefinition", "readOnlyOptions", "readOnlyValue"}, {"results.modificationMetadata.archivable", "results.modificationMetadata.readOnlyDefinition", "results.modificationMetadata.readOnlyOptions", "results.modificationMetadata.readOnlyValue"}),
+    #"Changed Type" = Table.TransformColumnTypes(#"Expanded results.modificationMetadata",{{"results.updatedAt", type datetime}, {"results.createdAt", type datetime}, {"results.name", type text}, {"results.label", type text}, {"results.type", type text}, {"results.fieldType", type text}, {"results.description", type text}, {"results.groupName", type text}, {"results.options", type any}, {"results.createdUserId", Int64.Type}, {"results.updatedUserId", Int64.Type}, {"results.referencedObjectType", type any}, {"results.displayOrder", Int64.Type}, {"results.calculated", type logical}, {"results.externalOptions", type logical}, {"results.archived", type logical}, {"results.hasUniqueValue", type logical}, {"results.hidden", type logical}, {"results.hubspotDefined", type logical}, {"results.showCurrencySymbol", type logical}, {"results.modificationMetadata.archivable", type logical}, {"results.modificationMetadata.readOnlyDefinition", type logical}, {"results.modificationMetadata.readOnlyOptions", type logical}, {"results.modificationMetadata.readOnlyValue", type logical}, {"results.formField", type logical}}),
+    CustomProp = Table.SelectRows(#"Changed Type", each ([results.hubspotDefined] = null)),
+    #"Removed Other Columns" = Table.SelectColumns(CustomProp,{"results.name"}),
+    #"results name" = #"Removed Other Columns"[results.name]
+in
+    #"results name";
+
+HubSpot.GetAccountsImpl = () =>
+let
+    accountsPropFromHubSpot = Hubspot.GetAccountCustomProperties(),
+    definedProp = Text.Split(accountsProperties, ","),
+    finalProp = List.Distinct(List.Combine({accountsPropFromHubSpot, definedProp})),
+    propertiesQString = List.Accumulate(finalProp, "", (state, current) => if state="" then state & "&properties="&current else state & "&" & "properties="&current),
+    queryRecord = [limit = pageSize],
+    queryString = Uri.BuildQueryString(queryRecord),
+    url = baseUrl & accountsSuffixUrl & "?" & queryString & propertiesQString,
+    AllRecords = HubSpot.GetAllPages(url),
+    table = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded Column3" = Table.ExpandRecordColumn(table, "Column1", {"id", "properties", "createdAt", "updatedAt", "archived"}, {"id", "properties", "createdAt", "updatedAt", "archived"}),
+    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded Column3", "properties", finalProp)
+in
+    #"Expanded properties";
+
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetDeals = Value.ReplaceType(HubSpot.GetDealsImpl, HubSpot.GetDealsImplType);
+HubSpot.GetDealsImplType = type function() as table meta [
+    Documentation.Name = Extension.LoadString("HubSpot.GetDeals.Name"),
+    Documentation.LongDescription = Extension.LoadString("HubSpot.GetDeals.LongDescription")
+];
+
+HubSpot.GetDealsImpl = () =>
+let
+    queryRecord = [limit = pageSize],
+    queryString = Uri.BuildQueryString(queryRecord),
+    propertiesQString = "&properties=" & Text.Replace(dealsProperties, ",", "&properties="),
+    url = baseUrl & dealsSuffixUrl & "?" & queryString & propertiesQString & "&associations=company&associations=contact",
+    AllRecords = HubSpot.GetAllPages(url),
+    #"Converted to Table" = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded results1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"id", "properties", "createdAt", "updatedAt", "archived", "associations"}, {"id", "properties", "createdAt", "updatedAt", "archived", "associations"}),
+    DealPropertyAsList = Text.Split(dealsProperties, ","),
+    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded results1", "properties", DealPropertyAsList),
+    #"Expanded associations" = Table.ExpandRecordColumn(#"Expanded properties", "associations", {"companies", "contacts"}, {"companies", "contacts" }),
+    #"Expanded companies" = Table.ExpandRecordColumn(#"Expanded associations", "companies", {"results"}, {"results"}),
+    #"Expanded results2" = Table.ExpandListColumn(#"Expanded companies", "results"),
+    #"Expanded results3" = Table.ExpandRecordColumn(#"Expanded results2", "results", {"id"}, {"companyId"}),
+    #"Expanded contacts" = Table.ExpandRecordColumn(#"Expanded results3", "contacts", {"results"}, {"results"}),
+    #"Expanded contacts2" = Table.ExpandListColumn(#"Expanded contacts", "results"),
+    #"Expanded contacts3" = Table.ExpandRecordColumn(#"Expanded contacts2", "results", {"id"}, {"contactId"}),
+    Uniq = Table.Distinct(#"Expanded contacts3")
+in
+    Uniq;
+
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetContacts = Value.ReplaceType( HubSpot.GetContactsImpl, HubSpot.GetContactsImplType);
+
+HubSpot.GetContactsImplType = type function() as table meta [
+    Documentation.Name = Extension.LoadString("HubSpot.GetContacts.Name"),
+    Documentation.LongDescription = Extension.LoadString("HubSpot.GetContacts.LongDescription")
+];
+HubSpot.GetContactsImpl = () =>
+let
+    apiKey = Extension.CurrentCredential()[Key],
+    queryRecord = [limit = pageSize],
+    queryString = Uri.BuildQueryString(queryRecord),
+    propertiesQString = "&properties=" & Text.Replace(contactsProperties, ",", "&properties="),
+    url = baseUrl & contactsSuffixUrl & "?" & queryString & propertiesQString,
+    AllRecords = HubSpot.GetAllPages(url),
+    table = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded Column3" = Table.ExpandRecordColumn(table, "Column1", {"id", "properties", "createdAt", "updatedAt", "archived"}, {"id", "properties", "createdAt", "updatedAt", "archived"}),
+    ContactPropertyAsList = Text.Split(contactsProperties, ","),
+    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded Column3", "properties", ContactPropertyAsList)
+in
+    #"Expanded properties";
+
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetTickets = Value.ReplaceType(HubSpot.GetTicketsImpl, HubSpot.GetTicketsImplType);
+HubSpot.GetTicketsImplType = type function() as table meta [
+    Documentation.Name = Extension.LoadString("HubSpot.GetTickets.Name"),
+    Documentation.LongDescription = Extension.LoadString("HubSpot.GetTickets.LongDescription")
+];
+HubSpot.GetTicketsImpl = () =>
+let
+    queryRecord = [limit = pageSize],
+    queryString = Uri.BuildQueryString(queryRecord),
+    propertiesQString = "&properties=" & Text.Replace(ticketProperties, ",", "&properties="),
+    url = baseUrl & ticketsSuffixUrl & "?" & queryString & propertiesQString,
+    AllRecords = HubSpot.GetAllPages(url),
+    table = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    #"Expanded Column3" = Table.ExpandRecordColumn(table, "Column1", {"id", "properties", "createdAt", "updatedAt", "archived"}, {"id", "properties", "createdAt", "updatedAt", "archived"}),
+    TicketPropertyAsList = Text.Split(ticketProperties, ","),
+    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded Column3", "properties", TicketPropertyAsList)
+in
+    #"Expanded properties";
+
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetOwners = Value.ReplaceType(HubSpot.GetOwnersImpl, HubSpot.GetOwnersImplType);
+
+HubSpot.GetOwnersImplType = type function() as table meta [
+    Documentation.Name = Extension.LoadString("HubSpot.GetOwners.Name"),
+    Documentation.LongDescription = Extension.LoadString("HubSpot.GetOwners.LongDescription")
+];
+
+HubSpot.GetOwnersImpl = () =>
+let
+    url = baseUrl & ownersSuffixUrl,
+    AllRecords = HubSpot.GetAllPages(url),
+    #"Converted to Table" = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
+    OwnerPropertyAsList = Text.Split(ownerProperties, ","),
+    #"Expanded results1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", OwnerPropertyAsList, OwnerPropertyAsList)
+in
+    #"Expanded results1";
+
+// Data Source Kind description
+HubSpot = [
+    // TestConnection is required to enable the connector through the Gateway
+    TestConnection = (dataSourcePath) => { "HubSpot.Contents" },
+    Authentication = [
+        Key = [KeyLabel = "HubSpot Private App Access Token (this connector is developed by Ranbeer Makin)", Label = "HubSpot Access Token"]
+    ],
+    Label = Extension.LoadString("DataSourceLabel")
+];
+
+// Data Source UI publishing description
+HubSpot.Publish = [
     Beta = true,
     Category = "Online Services",
-    ButtonText = { "Kno2 HubSpot Connector", "Kno2 HubSpot Connector" },
-    LearnMoreUrl = "https://developers.hubspot.com/docs/api/crm/understanding-the-crm",
+    ButtonText = { Extension.LoadString("ButtonTitle"), Extension.LoadString("ButtonHelp") },
+    LearnMoreUrl = "https://www.bigintsolutions.com",
     SourceImage = HubSpot.Icons,
     SourceTypeImage = HubSpot.Icons
 ];
 
 HubSpot.Icons = [
-    // reuse your existing icon files
-    Icon16 = { Extension.Contents("HubSpotConnector16.png") },
-    Icon20 = { Extension.Contents("HubSpotConnector20.png") },
-    Icon24 = { Extension.Contents("HubSpotConnector24.png") },
-    Icon32 = { Extension.Contents("HubSpotConnector32.png") },
-    Icon40 = { Extension.Contents("HubSpotConnector40.png") },
-    Icon48 = { Extension.Contents("HubSpotConnector48.png") },
-    Icon64 = { Extension.Contents("HubSpotConnector64.png") },
-    Icon80 = { Extension.Contents("HubSpotConnector80.png") }
+    Icon16 = { Extension.Contents("HubSpotConnector16.png"), Extension.Contents("HubSpotConnector20.png"), Extension.Contents("HubSpotConnector24.png"), Extension.Contents("HubSpotConnector32.png") },
+    Icon32 = { Extension.Contents("HubSpotConnector32.png"), Extension.Contents("HubSpotConnector40.png"), Extension.Contents("HubSpotConnector48.png"), Extension.Contents("HubSpotConnector64.png") }
 ];
 
-// ======================================================================
-// Polyfills for engines/tooling that lack these helpers
-// ======================================================================
-
-// Replacement for Table.GenerateByPage
-HubSpot.GenerateByPage = (getNextPage as function) as table =>
+FromTimestampToDate = (timestamp as any) as any =>
 let
-    pages =
-        List.Generate(
-            () => [ prev = null, page = getNextPage(null) ],
-            each _[page] <> null,
-            each [ prev = _[page], page = getNextPage(_[page]) ],
-            each _[page]
-        ),
-    out = if List.IsEmpty(pages) then #table({}, {}) else Table.Combine(pages)
+    extractedTimestamp = if timestamp <> null and Text.Length(timestamp) > 10 then Text.Range(timestamp, 0, 10) else timestamp,
+    timestampToNumber = try Number.From(extractedTimestamp) otherwise null,
+    date = if timestampToNumber <> null then #datetime(1970, 1, 1, 0, 0, 0) + #duration(0, 0, 0, timestampToNumber) else null
 in
-    out;
+    date;
 
-// Replacement for Table.ToNavigationTable
-HubSpot.ToNavigationTable =
-    (table as table, keyColumns as list, nameColumn as text, dataColumn as text, itemKindColumn as text, itemNameColumn as text) as table =>
+// Navigation Table Helper
+HubSpot.ToNavigationTable = (table as table, keyColumns as list, nameColumn as text, dataColumn as text, itemKindColumn as text, itemNameColumn as text, isLeafColumn as text) as table =>
 let
-    step1 = if nameColumn <> "Name" then Table.RenameColumns(table, {{nameColumn, "Name"}}) else table,
-    step2 = if dataColumn <> "Data" then Table.RenameColumns(step1, {{dataColumn, "Data"}}) else step1,
-    step3 = if itemKindColumn <> "ItemKind" then Table.RenameColumns(step2, {{itemKindColumn, "ItemKind"}}) else step2,
-    step4 =
-        if List.Contains(Table.ColumnNames(step3), itemNameColumn) and itemNameColumn <> "Name" then
-            Table.RenameColumns(step3, {{itemNameColumn, "ItemName"}})
-        else if not List.Contains(Table.ColumnNames(step3), "ItemName") then
-            Table.AddColumn(step3, "ItemName", each [Name], type text)
-        else
-            step3,
-    kept  = Table.SelectColumns(step4, {"Name","Data","ItemKind","ItemName"}),
-    nav   = kept meta [ IsNavigationTable = true ]
+    tableType = Value.Type(table),
+    newTableType = Type.AddTableKey(tableType, keyColumns, true) meta [
+        NavigationTable.NameColumn = nameColumn,
+        NavigationTable.DataColumn = dataColumn,
+        NavigationTable.ItemKindColumn = itemKindColumn,
+        Preview.DelayColumn = dataColumn,
+        NavigationTable.IsLeafColumn = isLeafColumn
+    ],
+    navigationTable = Value.ReplaceType(table, newTableType)
 in
-    nav;
-
-// ======================================================================
-// HTTP client + paging helpers
-// ======================================================================
-HubSpot.CreateClient = () as record =>
-let
-    token = Extension.CurrentCredential()[Key], // Key auth (Feed Key)
-    auth  = "Bearer " & token,
-
-    GetJson = (relativePath as text, optional query as nullable record) as record =>
-        Json.Document(
-            Web.Contents(
-                baseUrl & relativePath,
-                [
-                    Headers = [
-                        Authorization = auth,
-                        Accept        = "application/json",
-                        #"User-Agent"  = "PowerQuery-Connector"
-                    ],
-                    Query = if query = null then [] else query
-                ]
-            )
-        ),
-
-    // Generic cursor-paged list reader ({results=[...], paging.next.after})
-    PagedGet = (relativePath as text, optional query as nullable record) as table =>
-    let
-        PageSize   = 100,
-        BuildQuery = (after as nullable text) as record =>
-            Record.Combine({
-                if query = null then [] else query,
-                [ limit = Text.From(PageSize) ],
-                if after <> null then [ after = after ] else [],
-                [ archived = "false" ]
-            }),
-
-        GetPage = (prev as nullable table) as nullable table =>
-            let
-                after     = if prev = null then null else Value.Metadata(prev)[After],
-                json      = GetJson(relativePath, BuildQuery(after)),
-                items     = if Record.HasFields(json, "results") then json[results] else {},
-                tbl       = if List.IsEmpty(items) then #table({}, {}) else Table.FromRecords(items),
-                nextAfter = try json[paging][next][after] otherwise null,
-                out       = if Table.RowCount(tbl) = 0 then null else tbl meta [ After = nextAfter ]
-            in
-                out,
-
-        Pages = HubSpot.GenerateByPage(GetPage)
-    in
-        Pages,
-
-    // Variant for endpoints that may return "items" or don’t support 'archived' flag
-    PagedGetSimple = (relativePath as text, optional query as nullable record) as table =>
-    let
-        PageSize   = 100,
-        BuildQuery = (after as nullable text) as record =>
-            Record.Combine({
-                if query = null then [] else query,
-                [ limit = Text.From(PageSize) ],
-                if after <> null then [ after = after ] else []
-            }),
-
-        GetPage = (prev as nullable table) as nullable table =>
-            let
-                after     = if prev = null then null else Value.Metadata(prev)[After],
-                json      = GetJson(relativePath, BuildQuery(after)),
-                items     =
-                    if Record.HasFields(json, "results") then json[results]
-                    else if Record.HasFields(json, "items") then json[items]
-                    else {},
-                tbl       = if List.IsEmpty(items) then #table({}, {}) else Table.FromRecords(items),
-                nextAfter = try json[paging][next][after] otherwise null,
-                out       = if Table.RowCount(tbl) = 0 then null else tbl meta [ After = nextAfter ]
-            in
-                out,
-
-        Pages = HubSpot.GenerateByPage(GetPage)
-    in
-        Pages
-in
-    [
-        GetJson        = GetJson,
-        PagedGet       = PagedGet,
-        PagedGetSimple = PagedGetSimple,
-        AuthHeader     = auth
-    ];
-
-// ======================================================================
-// TestConnection (prevents endless spinner)
-// ======================================================================
-shared HubSpot.TestConnection = (dataSourcePath as any) as list =>
-let
-    token = Extension.CurrentCredential()[Key],
-    auth  = "Bearer " & token,
-    _ping = Web.Contents(
-        "https://api.hubapi.com/crm/v3/owners",
-        [ Headers = [ Authorization = auth, Accept = "application/json" ], Query = [ limit = "1" ] ]
-    )
-in
-    { true };
-
-// ======================================================================
-// Object fetchers + Navigation
-// ======================================================================
-HubSpot.PathForObject = (object as text) as text =>
-    if object = "owners" then
-        "/crm/v3/owners"
-    else
-        "/crm/v3/objects/" & object;
-
-HubSpot.FetchObject = (object as text, client as record, optional properties as nullable list) as table =>
-let
-    path   = HubSpot.PathForObject(object),
-    query  = if properties <> null and List.Count(properties) > 0
-             then [ properties = Text.Combine(List.Transform(properties, each _), ",") ]
-             else [],
-    table  = client[PagedGet](path, query)
-in
-    table;
-
-HubSpot.FetchPipelines = (objectType as text, client as record) as table =>
-let
-    path  = "/crm/v3/pipelines/" & objectType,
-    table = client[PagedGetSimple](path, [])
-in
-    table;
-
-HubSpot.Navigation = (client as record) as table =>
-let
-    Objects =
-        {
-            "contacts", "companies", "deals", "tickets",
-            "owners",
-            "products", "line_items", "quotes",
-            //"feedback_submissions",
-            //"goals",
-            "tasks", "calls", "emails", "meetings", "notes"
-        },
-
-    ObjectRows =
-        List.Transform(
-            Objects,
-            (o as text) => [
-                Name = Text.Proper(Text.Replace(o, "_", " ")),
-                Kind = "Table",
-                Data = HubSpot.FetchObject(o, client, null)
-            ]
-        ),
-
-    PipelineRows =
-        List.Transform(
-            { "deals", "tickets" },
-            (o as text) => [
-                Name = "Pipelines - " & Text.Proper(o),
-                Kind = "Table",
-                Data = HubSpot.FetchPipelines(o, client)
-            ]
-        ),
-
-    Rows = List.Combine({ ObjectRows, PipelineRows }),
-    NavTableRaw = #table(type table [ Name = text, Kind = text, Data = any ], Rows),
-
-    Nav = HubSpot.ToNavigationTable(
-        NavTableRaw,
-        {"Name"},      // key
-        "Name",        // name column
-        "Data",        // data column
-        "Kind",        // item kind column
-        "Name"         // item name column
-    )
-in
-    Nav;
+    navigationTable;
