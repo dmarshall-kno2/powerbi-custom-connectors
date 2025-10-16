@@ -222,8 +222,8 @@ let
             "contacts", "companies", "deals", "tickets",
             "owners",
             "products", "line_items", "quotes",
-            "feedback_submissions",
-            "goals",
+            //"feedback_submissions",
+            //"goals",
             "tasks", "calls", "emails", "meetings", "notes"
         },
 
