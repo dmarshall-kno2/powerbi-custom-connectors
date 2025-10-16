@@ -1,0 +1,43 @@
+name: Release MEZ
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag for release (e.g. v1.0.0)'
+        required: true
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+
+      - name: Run build script
+        shell: pwsh
+        run: |
+          if (Test-Path ./code/build-desktop.ps1) {
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File ./code/build-desktop.ps1
+          } else {
+            Write-Error "build-desktop.ps1 not found"
+            exit 1
+          }
+
+      - name: Create Release and upload MEZ
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload MEZ to Release
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: code/bin/AnyCPU/Debug/Kno2HubSpotConnector.mez
+          asset_name: Kno2HubSpotConnector.mez
+          asset_content_type: application/zip

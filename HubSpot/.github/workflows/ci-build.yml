@@ -16,29 +16,53 @@ jobs:
       - name: Setup PowerShell
         uses: actions/setup-powershell@v2
 
-      - name: Attempt to download Power Query SDK tools
+      - name: Prepare tools directory
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path tools | Out-Null
+
+      - name: Try to download Power Query SDK extension archive (best-effort)
         shell: pwsh
         run: |
           $out = "tools"
-          New-Item -ItemType Directory -Force -Path $out | Out-Null
-          # Try to download MakePQX from the Power Query SDK NuGet package feed (best-effort).
-          $nupkg = "Microsoft.PowerQuery.SdkTools.nupkg"
           $url = 'https://registry.npmjs.org/powerquery.vscode-powerquery-sdk/-/powerquery.vscode-powerquery-sdk-0.6.3-win32-x64.tgz'
           try {
-            Invoke-WebRequest -Uri $url -OutFile "$out\$nupkg" -UseBasicParsing -ErrorAction Stop
-            Write-Host "Downloaded SDK archive to $out\$nupkg"
+            Invoke-WebRequest -Uri $url -OutFile "$out\extension.tgz" -UseBasicParsing -ErrorAction Stop
+            Write-Host "Downloaded extension archive to $out\extension.tgz"
+            # Attempt to extract PQTest/MakePQX from the tarball
+            tar -xzf "$out\extension.tgz" -C $out
+            Write-Host "Extracted archive"
           } catch {
-            Write-Warning "Could not download SDK archive. Build steps that require MakePQX will be skipped."
+            Write-Warning "Could not download/extract SDK extension archive. Continuing — build steps that require MakePQX/PQTest will be skipped."
           }
 
-      - name: Run build script (MakePQX) if available
+      - name: Locate MakePQX
+        shell: pwsh
+        id: findmakepqx
+        run: |
+          $candidates = Get-ChildItem -Path tools -Recurse -Filter MakePQX.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+          if ($candidates) { Write-Host $candidates[0]; exit 0 } else { Write-Host ""; exit 0 }
+
+      - name: Run build-desktop.ps1 (if available)
+        if: always()
         shell: pwsh
         run: |
-          if (Test-Path "./code/build-desktop.ps1") {
+          if (Test-Path ./code/build-desktop.ps1) {
             Write-Host "Invoking build-desktop.ps1"
             & pwsh -NoProfile -ExecutionPolicy Bypass -File ./code/build-desktop.ps1
           } else {
             Write-Warning "No build-desktop.ps1 found; skipping build"
+          }
+
+      - name: Try to run PQTest (if found)
+        shell: pwsh
+        run: |
+          $pqtest = Get-ChildItem -Path tools -Recurse -Filter PQTest.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName -First 1
+          if ($pqtest) {
+            Write-Host "Found PQTest at $pqtest"
+            & $pqtest test-connection --extension "$(Pipeline.Workspace)/**/Kno2HubSpotConnector.mez" --queryFile "./code/HubSpotConnector.query.pq" | Out-Host
+          } else {
+            Write-Warning "PQTest not found; skipping test-connection step"
           }
 
       - name: Upload MEZ artifact
