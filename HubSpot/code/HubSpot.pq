@@ -177,12 +177,10 @@ let
     propertiesQString = "&properties=" & Text.Replace(ticketProperties, ",", "&properties="),
     url = baseUrl & ticketsSuffixUrl & "?" & queryString & propertiesQString,
     AllRecords = HubSpot.GetAllPages(url),
-    table = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
-    #"Expanded Column3" = Table.ExpandRecordColumn(table, "Column1", {"id", "properties", "createdAt", "updatedAt", "archived"}, {"id", "properties", "createdAt", "updatedAt", "archived"}),
-    TicketPropertyAsList = Text.Split(ticketProperties, ","),
-    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded Column3", "properties", TicketPropertyAsList)
+    // **FIX**: Directly convert the list of records to a table.
+    table = Table.FromRecords(AllRecords)
 in
-    #"Expanded properties";
+    table;
 
 [DataSource.Kind="HubSpot"]
 shared HubSpot.GetOwners = Value.ReplaceType(HubSpot.GetOwnersImpl, HubSpot.GetOwnersImplType);
@@ -196,11 +194,10 @@ HubSpot.GetOwnersImpl = () =>
 let
     url = baseUrl & ownersSuffixUrl,
     AllRecords = HubSpot.GetAllPages(url),
-    #"Converted to Table" = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
-    OwnerPropertyAsList = Text.Split(ownerProperties, ","),
-    #"Expanded results1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", OwnerPropertyAsList, OwnerPropertyAsList)
+    // **FIX**: Directly convert the list of records to a table, avoiding the "Column1" error.
+    #"Converted to Table" = Table.FromRecords(AllRecords)
 in
-    #"Expanded results1";
+    #"Converted to Table";
 
 // Data Source Kind description
 HubSpot = [
