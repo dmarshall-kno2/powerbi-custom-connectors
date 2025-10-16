@@ -178,7 +178,7 @@ in
 // ======================================================================
 // TestConnection (prevents endless spinner)
 // ======================================================================
-shared HubSpot.TestConnection = (optional dataSourcePath as any) as list =>
+shared HubSpot.TestConnection = (dataSourcePath as any) as list =>
 let
     token = Extension.CurrentCredential()[Key],
     auth  = "Bearer " & token,
@@ -224,7 +224,6 @@ let
             "products", "line_items", "quotes",
             "feedback_submissions",
             "goals",
-            "postal_mail",
             "tasks", "calls", "emails", "meetings", "notes"
         },
 

@@ -1,0 +1,51 @@
+name: CI - Build and Test (MakePQX)
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+
+      - name: Attempt to download Power Query SDK tools
+        shell: pwsh
+        run: |
+          $out = "tools"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          # Try to download MakePQX from the Power Query SDK NuGet package feed (best-effort).
+          $nupkg = "Microsoft.PowerQuery.SdkTools.nupkg"
+          $url = 'https://registry.npmjs.org/powerquery.vscode-powerquery-sdk/-/powerquery.vscode-powerquery-sdk-0.6.3-win32-x64.tgz'
+          try {
+            Invoke-WebRequest -Uri $url -OutFile "$out\$nupkg" -UseBasicParsing -ErrorAction Stop
+            Write-Host "Downloaded SDK archive to $out\$nupkg"
+          } catch {
+            Write-Warning "Could not download SDK archive. Build steps that require MakePQX will be skipped."
+          }
+
+      - name: Run build script (MakePQX) if available
+        shell: pwsh
+        run: |
+          if (Test-Path "./code/build-desktop.ps1") {
+            Write-Host "Invoking build-desktop.ps1"
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File ./code/build-desktop.ps1
+          } else {
+            Write-Warning "No build-desktop.ps1 found; skipping build"
+          }
+
+      - name: Upload MEZ artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kno2HubSpotConnector-mez
+          path: |
+            code/bin/**/Kno2HubSpotConnector.mez
+            **/Kno2HubSpotConnector.mez
