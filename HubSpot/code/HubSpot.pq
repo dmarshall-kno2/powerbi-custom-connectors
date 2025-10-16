@@ -7,12 +7,14 @@ baseUrl = "https://api.hubapi.com";
 companiesSuffixUrl = "/crm/v3/objects/companies";
 dealsSuffixUrl = "/crm/v3/objects/deals";
 contactsSuffixUrl = "/crm/v3/objects/contacts";
+productsSuffixUrl = "/crm/v3/objects/products"; // Added Products path
 ownersSuffixUrl = "/crm/v3/owners/";
 companiesPropertiesSuffixUrl = "/crm/v3/properties/companies";
 
 companiesProperties = "name,domain,hubspot_owner_id,industry,lifecyclestage,city,state,country,website,annualrevenue,createdate,hs_lastmodifieddate,numberofemployees";
 dealsProperties = "hs_forecast_amount,hs_manual_forecast_category,hs_forecast_probability,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
 contactsProperties = "lead_source,gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,hs_analytics_source,lifecyclage,associatedcompanyid,createdate";
+productsProperties = "name,price,description,hs_product_type"; // Added Products properties
 ownerProperties = "id,email,type,firstName,lastName,userId,userIdIncludingInactive,createdAt,updatedAt,archived";
 pageSize = "100";
 
@@ -32,6 +34,7 @@ let
             {"Companies", "Companies", HubSpot.GetCompanies(), "Table", "Table", true},
             {"Contacts", "Contacts", HubSpot.GetContacts(), "Table", "Table", true},
             {"Deals", "Deals", HubSpot.GetDeals(), "Table", "Table", true},
+            {"Products", "Products", HubSpot.GetProducts(), "Table", "Table", true}, // Added Products table
             {"Owners", "Owners", HubSpot.GetOwners(), "Table", "Table", true}
         }
     ),
@@ -84,14 +87,13 @@ let
     accessToken = Extension.CurrentCredential()[Key],
     apiHeaders = [#"Content-Type" = "application/json", Authorization = "Bearer " & accessToken],
     Source = Json.Document(Web.Contents(url, [ ManualCredentials = true, Headers = apiHeaders])),
-    #"Converted to Table" = Table.FromRecords({Source}),
-    #"Expanded results" = Table.ExpandListColumn(#"Converted to Table", "results"),
-    #"Expanded results1" = Table.ExpandRecordColumn(#"Expanded results", "results", {"name"}, {"results.name"}),
-    CustomProp = Table.SelectRows(#"Expanded results1", each ([hubspotDefined] = null)),
-    #"Removed Other Columns" = Table.SelectColumns(CustomProp,{"results.name"}),
-    #"results name" = #"Removed Other Columns"[results.name]
+    resultsList = Record.FieldOrDefault(Source, "results", {}),
+    table = if List.IsEmpty(resultsList) then #table({"name", "hubspotDefined"}, {}) else Table.FromRecords(resultsList),
+    relevantColumns = Table.SelectColumns(table, {"name", "hubspotDefined"}),
+    customPropsTable = Table.SelectRows(relevantColumns, each [hubspotDefined] = false),
+    listOfNames = customPropsTable[name]
 in
-    #"results name";
+    listOfNames;
 
 HubSpot.GetCompaniesImpl = () =>
 let
@@ -155,6 +157,28 @@ let
     #"Expanded properties" = if Table.IsEmpty(table) then table else Table.ExpandRecordColumn(table, "properties", ContactPropertyAsList)
 in
     #"Expanded properties";
+
+// ** START: NEW PRODUCTS FUNCTION **
+[DataSource.Kind="HubSpot"]
+shared HubSpot.GetProducts = Value.ReplaceType(HubSpot.GetProductsImpl, HubSpot.GetProductsImplType);
+
+HubSpot.GetProductsImplType = type function() as table meta [
+    Documentation.Name = "Get HubSpot Products",
+    Documentation.LongDescription = "Retrieves all products from HubSpot."
+];
+HubSpot.GetProductsImpl = () =>
+let
+    queryRecord = [limit = pageSize],
+    queryString = Uri.BuildQueryString(queryRecord),
+    propertiesQString = "&properties=" & Text.Replace(productsProperties, ",", "&properties="),
+    url = baseUrl & productsSuffixUrl & "?" & queryString & propertiesQString,
+    AllRecords = HubSpot.GetAllPages(url),
+    table = Table.FromRecords(AllRecords),
+    ProductPropertyList = Text.Split(productsProperties, ","),
+    #"Expanded properties" = if Table.IsEmpty(table) then table else Table.ExpandRecordColumn(table, "properties", ProductPropertyList)
+in
+    #"Expanded properties";
+// ** END: NEW PRODUCTS FUNCTION **
 
 [DataSource.Kind="HubSpot"]
 shared HubSpot.GetOwners = Value.ReplaceType(HubSpot.GetOwnersImpl, HubSpot.GetOwnersImplType);
