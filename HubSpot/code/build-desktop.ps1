@@ -5,7 +5,14 @@ param(
 )
 
 $desktop = [Environment]::GetFolderPath("Desktop")
-$targetBase = Join-Path $desktop $TargetName
+
+# If the user provided an absolute path for TargetName, treat it as the full target base.
+# Otherwise, place the target on the Desktop (backwards-compatible default).
+if ([System.IO.Path]::IsPathRooted($TargetName)) {
+    $targetBase = $TargetName
+} else {
+    $targetBase = Join-Path $desktop $TargetName
+}
 
 if (-not (Test-Path $MakePath)) {
     Write-Error "MakePQX not found: $MakePath`nInstall the Power Query SDK or update the MakePath parameter."
