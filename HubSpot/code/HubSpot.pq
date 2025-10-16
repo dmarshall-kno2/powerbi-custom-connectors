@@ -13,7 +13,7 @@ accountsPropertiesSuffixUrl = "/crm/v3/properties/companies";
 
 accountsProperties = "name,city,country,industry,hubspot_owner_id,website,annualrevenue,createdate,hs_lead_status,num_contacted_notes,recent_deal_amount,total_revenue";
 dealsProperties = "hs_forecast_amount,hs_manual_forecast_category,hs_forecast_probability,amount,amount_in_home_currency,closedate,createdate,dealname,dealstage,dealtype,pipeline,hubspot_owner_id,num_notes,num_contacted_notes,closed_lost_reason,closed_won_reason";
-contactsProperties = "lead_source,gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,hs_analytics_source,lifecyclestage,associatedcompanyid,createdate";
+contactsProperties = "lead_source,gender,industry,email,hs_linkedinid,city,country,state,jobtitle,job_function,num_associated_deals,hubspot_owner_id,website,firstname,lastname,phone,hs_lead_status,hs_analytics_source,lifecyclage,associatedcompanyid,createdate";
 ticketProperties = "hs_ticket_priority,hs_pipeline,subject,time_to_close,time_to_first_agent_reply,hs_pipeline_stage,createdate,source_type,hubspot_owner_id,hs_ticket_category,closed_date,hs_lastcontacted";
 ownerProperties = "id,email,type,firstName,lastName,userId,userIdIncludingInactive,createdAt,updatedAt,archived";
 pageSize = "100";
@@ -34,7 +34,7 @@ let
             {"Accounts", "Accounts", HubSpot.GetAccounts(), "Table", "Table", true},
             {"Contacts", "Contacts", HubSpot.GetContacts(), "Table", "Table", true},
             {"Deals", "Deals", HubSpot.GetDeals(), "Table", "Table", true},
-            {"Tickets", "Tickets", HubSpot.GetTickets(), "Table", "Table", true},
+            // {"Tickets", "Tickets", HubSpot.GetTickets(), "Table", "Table", true}, // Removed Tickets
             {"Owners", "Owners", HubSpot.GetOwners(), "Table", "Table", true}
         }
     ),
@@ -131,19 +131,16 @@ let
     url = baseUrl & dealsSuffixUrl & "?" & queryString & propertiesQString & "&associations=company&associations=contact",
     AllRecords = HubSpot.GetAllPages(url),
     #"Converted to Table" = Table.FromList(AllRecords, Splitter.SplitByNothing(), null, null, ExtraValues.Error),
-    #"Expanded results1" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"id", "properties", "createdAt", "updatedAt", "archived", "associations"}, {"id", "properties", "createdAt", "updatedAt", "archived", "associations"}),
+    #"Expanded Base Columns" = Table.ExpandRecordColumn(#"Converted to Table", "Column1", {"id", "properties", "createdAt", "updatedAt", "archived", "associations"}, {"id", "properties", "createdAt", "updatedAt", "archived", "associations"}),
     DealPropertyAsList = Text.Split(dealsProperties, ","),
-    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded results1", "properties", DealPropertyAsList),
-    #"Expanded associations" = Table.ExpandRecordColumn(#"Expanded properties", "associations", {"companies", "contacts"}, {"companies", "contacts" }),
-    #"Expanded companies" = Table.ExpandRecordColumn(#"Expanded associations", "companies", {"results"}, {"results"}),
-    #"Expanded results2" = Table.ExpandListColumn(#"Expanded companies", "results"),
-    #"Expanded results3" = Table.ExpandRecordColumn(#"Expanded results2", "results", {"id"}, {"companyId"}),
-    #"Expanded contacts" = Table.ExpandRecordColumn(#"Expanded results3", "contacts", {"results"}, {"results"}),
-    #"Expanded contacts2" = Table.ExpandListColumn(#"Expanded contacts", "results"),
-    #"Expanded contacts3" = Table.ExpandRecordColumn(#"Expanded contacts2", "results", {"id"}, {"contactId"}),
-    Uniq = Table.Distinct(#"Expanded contacts3")
+    #"Expanded properties" = Table.ExpandRecordColumn(#"Expanded Base Columns", "properties", DealPropertyAsList),
+    // Safely extract the company and contact IDs
+    #"Add Company ID" = Table.AddColumn(#"Expanded properties", "companyId", each try [associations][companies][results]{0}[id] otherwise null, type text),
+    #"Add Contact ID" = Table.AddColumn(#"Add Company ID", "contactId", each try [associations][contacts][results]{0}[id] otherwise null, type text),
+    // Remove the original associations column now that we have the IDs
+    #"Removed associations" = Table.RemoveColumns(#"Add Contact ID", {"associations"})
 in
-    Uniq;
+    #"Removed associations";
 
 [DataSource.Kind="HubSpot"]
 shared HubSpot.GetContacts = Value.ReplaceType( HubSpot.GetContactsImpl, HubSpot.GetContactsImplType);
