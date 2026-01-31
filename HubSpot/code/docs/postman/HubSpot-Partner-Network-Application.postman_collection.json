@@ -1,0 +1,260 @@
+﻿{
+  "info": {
+    "name": "Kno2 HubSpot Connector - CRM Objects",
+    "_postman_id": "c9d6b9b8-2f5a-4db5-9a72-0b9aef3a8aa1",
+    "description": "Workspace: Kno2 HubSpot Connector (placeholder).\\n\\nCollection for validating HubSpot CRM object access used by the Kno2 custom connector.\\n\\nHelpful links:\\n- HubSpot schemas: https://api.hubapi.com/crm/v3/schemas\\n- Partner Network Application UI: https://app-na2.hubspot.com/contacts/44204548/record/0-420/663466742505\\n- Partner Contracts UI: https://app-na2.hubspot.com/contacts/44204548/objects/2-222440285/views/all/list\\n- Partner Product Communication Details UI: https://app-na2.hubspot.com/contacts/44204548/objects/2-221836290/views/all/list\\n- Partner Products and Systems UI: https://app-na2.hubspot.com/contacts/44204548/objects/2-221830980/views/all/list\\n- Courses UI: https://app-na2.hubspot.com/contacts/44204548/objects/0-410/views/all/list\\n- Partner Product Releases UI: https://app-na2.hubspot.com/contacts/44204548/objects/0-970/views/all/list\\n\\nHow to use:\\n1) Set collection variables (baseUrl, accessToken, objectTypeId, recordId).\\n2) Run the schema request to confirm object labels and IDs.\\n3) Run list/get requests to validate visibility.\\n\\nNotes:\\n- accessToken is a HubSpot private app token.\\n- objectTypeId may be a standard object name (e.g., companies) or a custom object ID (e.g., 0-420).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Schemas",
+      "item": [
+        {
+          "name": "List schemas (confirm object label)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/schemas",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "schemas" ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Objects - Partner Network Application (0-420)",
+      "item": [
+        {
+          "name": "List Partner Network Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/0-420?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "0-420" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Partner Network Application by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/0-420/{{recordId}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "0-420", "{{recordId}}" ]
+            }
+          }
+        },
+        {
+          "name": "Get Partner Network Application by ID (archived)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/0-420/{{recordId}}?archived=true",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "0-420", "{{recordId}}" ],
+              "query": [
+                { "key": "archived", "value": "true" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Objects - Partner Contracts (2-222440285)",
+      "item": [
+        {
+          "name": "List Partner Contracts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/2-222440285?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "2-222440285" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Objects - Partner Product Communication Details (2-221836290)",
+      "item": [
+        {
+          "name": "List Partner Product Communication Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/2-221836290?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "2-221836290" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Objects - Partner Products and Systems (2-221830980)",
+      "item": [
+        {
+          "name": "List Partner Products and Systems",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/2-221830980?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "2-221830980" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Objects - Courses (0-410)",
+      "item": [
+        {
+          "name": "List Courses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/0-410?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "0-410" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custom Objects - Partner Product Releases (0-970)",
+      "item": [
+        {
+          "name": "List Partner Product Releases",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/0-970?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "0-970" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Standard Objects (examples)",
+      "item": [
+        {
+          "name": "List Companies",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/companies?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "companies" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/contacts?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "contacts" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Deals (Opportunities)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/crm/v3/objects/deals?limit=10",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "crm", "v3", "objects", "deals" ],
+              "query": [
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "https://api.hubapi.com" },
+    { "key": "accessToken", "value": "<YOUR_PRIVATE_APP_ACCESS_TOKEN>" },
+    { "key": "recordId", "value": "663466742505" }
+  ]
+}
+

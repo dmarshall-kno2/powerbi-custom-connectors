@@ -1,0 +1,34 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "c:\\Users\\DanMarshall\\Kno2"]
+    },
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"]
+    },
+    "hubspot": {
+      "type": "http",
+      "url": "https://mcp.hubspot.com/anthropic"
+    },
+    "sharepoint": {
+      "command": "npx",
+      "args": ["-y", "@softeria/ms-365-mcp-server", "--org-mode"],
+      "env": {
+        "MS365_MCP_CLIENT_ID": "${SHAREPOINT_CLIENT_ID}",
+        "MS365_MCP_TENANT_ID": "${SHAREPOINT_TENANT_ID}",
+        "MS365_MCP_CLIENT_SECRET": "${SHAREPOINT_CLIENT_SECRET}",
+        "MS365_MCP_ORG_MODE": "true"
+      }
+    },
+    "semgrep": {
+      "command": "py",
+      "args": ["-3.13", "-m", "uv", "tool", "run", "semgrep-mcp"]
+    }
+  }
+}

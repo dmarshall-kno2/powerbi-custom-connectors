@@ -3,5 +3,14 @@
 		{
 			"path": ".."
 		}
-	]
+	],
+	"extensions": {
+		"recommendations": [
+			"anthropic.claude-code",
+			"andrepimenta.claude-code-chat"
+		]
+	},
+	"settings": {
+		"claudeCodeChat.permissions.yoloMode": false
+	}
 }

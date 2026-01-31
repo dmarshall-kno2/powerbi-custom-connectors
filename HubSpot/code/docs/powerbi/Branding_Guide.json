@@ -1,0 +1,83 @@
+{
+  "name": "Kno2 Connected Brand Guide",
+  "version": "2025",
+  "sourceFiles": [
+    "docs/kno2-brand-guidelines-documents/Kno2 Connected Brand Guidelines_2025.docx",
+    "docs/kno2-brand-guidelines-documents/Kno2 Brand Guidelines_June23.pptx"
+  ],
+  "fonts": {
+    "primary": "Segoe UI",
+    "secondary": "Din",
+    "fallback": "Arial"
+  },
+  "authoritativeTheme": "docs/powerbi/Corporate_Theme.json",
+  "colors": {
+    "primary": {
+      "deepBlue": "#01248E",
+      "blue": "#005697",
+      "azure": "#0B7DC2",
+      "sky": "#19A7DE",
+      "linkBlue": "#066BC1",
+      "lightBlue": "#E4F3FB"
+    },
+    "accent": {
+      "yellowAction": "#FBC908",
+      "orange": "#E77A3C",
+      "purple": "#5B61F6"
+    },
+    "support": {
+      "black": "#060707",
+      "grey": "#4B4B4B",
+      "white": "#FFFFFF"
+    }
+  },
+  "usageNotes": {
+    "actionColor": "#FBC908",
+    "bodyText": "#060707",
+    "captionText": "#4B4B4B",
+    "background": "#FFFFFF",
+    "brandMark": "The Kno2 icon uses a trio of blues with overlapping gradients."
+  },
+  "metadataManagement": {
+    "requirement": "Use this JSON for UI metadata enforcement across workspaces.",
+    "scope": "All Power BI workspaces and report templates."
+  },
+  "brandMission": "Democratize healthcare communication by enabling seamless and secure interoperability across the healthcare ecosystem through a single API.",
+  "brandPromise": "Kno2 Connected signifies seamless healthcare communication integration, adherence to industry standards, enhanced interoperability, and validated compatibility with the Kno2 ecosystem.",
+  "approvedMessaging": {
+    "partnership": [
+      "<Partner> announces its partnership with Kno2 (R), the company leading the future of healthcare communication.",
+      "<Partner> announces its partnership with Kno2 (R), a purpose-driven company democratizing healthcare communication for secure, effortless, and maximized exchange of patient information."
+    ],
+    "integratedTechnology": [
+      "<Product> is Kno2 Connected.",
+      "<Product> is connected by Kno2 (R)."
+    ],
+    "network": [
+      "Kno2's network enables secure, effortless, and maximized exchange of patient information.",
+      "Connect once to Kno2 and gain access to a powerful network of connected organizations, technologies, and interoperability frameworks."
+    ],
+    "qhin": [
+      "<Organization> has selected Kno2 as their national healthcare communication infrastructure, including QHIN services.",
+      "<Organization> is excited to announce our partnership with Kno2 as our official QHIN partner."
+    ]
+  },
+  "logoUsage": {
+    "preferred": "Full-color Kno2 icon with blue dots",
+    "alternate": "Full-color Kno2 icon with white dots (only if needed)",
+    "minSizePrintInches": 1,
+    "minSizeScreenPx": 120,
+    "notes": "Maintain correct aspect ratio and clear space; confirm minimum on-screen dimension in the brand deck."
+  },
+  "editorial": {
+    "nameUsage": "Kno2 is one word; never abbreviate as K2.",
+    "trademark": "Include registered trademark symbol (R) after the first reference to the organization name.",
+    "connectedPhrase": "Use 'Kno2 Connected' in public references; 'connected by Kno2' is acceptable for grammar."
+  },
+  "thirdPartyBranding": {
+    "DocuSign": "brand.docusign.com",
+    "DirectTrust": "directtrust.org/resources",
+    "Carequality": "Carequality is a framework, not a network; no italicized 'e' in plain text.",
+    "TEFCA": "Use the full name 'Trusted Exchange Framework and Common Agreement (TEFCA)'."
+  }
+}

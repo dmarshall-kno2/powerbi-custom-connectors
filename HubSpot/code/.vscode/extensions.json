@@ -1,5 +1,9 @@
 {
     "recommendations": [
-        "powerquery.vscode-powerquery-sdk"
+        "powerquery.vscode-powerquery-sdk",
+        "anthropic.claude-code",
+        "andrepimenta.claude-code-chat",
+        "ms-vsliveshare.vsliveshare",
+        "analysis-services.powerbi-modeling-mcp"
     ]
 }

@@ -1,0 +1,57 @@
+{
+  "name": "Corporate Theme",
+  "dataColors": [
+    "#01248E",
+    "#005697",
+    "#0B7DC2",
+    "#19A7DE",
+    "#066BC1",
+    "#E77A3C",
+    "#FBC908",
+    "#5B61F6",
+    "#E4F3FB"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#060707",
+  "tableAccent": "#19A7DE",
+  "textClasses": {
+    "label": {
+      "fontFace": "Segoe UI",
+      "fontSize": 10
+    },
+    "title": {
+      "fontFace": "Din",
+      "fontSize": 12
+    },
+    "callout": {
+      "fontFace": "Din",
+      "fontSize": 14
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "show": false,
+            "color": { "solid": { "color": "#FFFFFF" } },
+            "transparency": 100
+          }
+        ],
+        "border": [
+          {
+            "show": false,
+            "color": { "solid": { "color": "#E4F3FB" } }
+          }
+        ],
+        "title": [
+          {
+            "show": true,
+            "fontFamily": "Din",
+            "fontColor": { "solid": { "color": "#060707" } }
+          }
+        ]
+      }
+    }
+  }
+}
